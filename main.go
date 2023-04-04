@@ -2,14 +2,101 @@ package main
 
 import (
 	"fmt"
-	"strings"
 )
 
-type Gramatica struct {
-	produccionInicial string
-	producciones      map[string][][]string
+func main() {
+	/*gramatica := map[string][]string{
+		"E":  {"T", "E'"},
+		"E'": {"+", "T", "E'", "|", "λ"},
+		"T":  {"F", "T'"},
+		"T'": {"*", "F", "T'", "|", "λ"},
+		"F":  {"(", "E", ")", "|", "id"},
+	}
+
+	gramatica := map[string][]string{
+		"A": {"B", "C"},
+		"B": {"λ", "|", "m"},
+		"C": {"λ", "|", "s"},
+	}*/
+
+	gramatica := map[string][]string{
+		"E":  {"T", "EP"},
+		"EP": {"+", "T", "EP", "|", "λ"},
+		"T":  {"F", "TP"},
+		"TP": {"*", "F", "TP", "|", "λ"},
+		"F":  {"(", "E", ")", "|", "ident"},
+	}
+
+	// Se calculan los primeros de la gramática
+	primeros := calcularPrimeros(gramatica)
+
+	// Se imprimen los primeros de cada no terminal
+	for noTerminal, conjuntoPrimeros := range primeros {
+		fmt.Printf("Primeros de %s: %v\n", noTerminal, conjuntoPrimeros)
+	}
 }
 
+func calcularPrimeros(gramatica map[string][]string) map[string][]string {
+	primeros := make(map[string][]string)
+	visitados := make(map[string]bool)
+
+	// Función recursiva para calcular los primeros de cada no terminal
+	var calcularPrimerosRec func(string) []string
+	calcularPrimerosRec = func(noTerminal string) []string {
+		// Si ya se visitó este no terminal, se retorna su conjunto de primeros
+		if visitados[noTerminal] {
+			return primeros[noTerminal]
+		}
+		visitados[noTerminal] = true
+
+		// Se recorre cada producción del no terminal
+		for _, produccion := range gramatica[noTerminal] {
+			// Si la producción empieza con un terminal, se agrega a los primeros del no terminal actual
+			if esTerminal(produccion[0]) {
+				primeros[noTerminal] = append(primeros[noTerminal], string(produccion[0]))
+			}
+			// Si la producción empieza con un no terminal, se calculan sus primeros y se agregan a los del no terminal actual
+			if esNoTerminal(produccion[0]) {
+				primeros[noTerminal] = append(primeros[noTerminal], calcularPrimerosRec(string(produccion[0]))...)
+			}
+			// Si la producción empieza con lambda, se agrega a los primeros del no terminal actual
+			if produccion == "λ" {
+				primeros[noTerminal] = append(primeros[noTerminal], "λ")
+			}
+		}
+		primeros[noTerminal] = eliminarDuplicados(primeros[noTerminal])
+		return primeros[noTerminal]
+	}
+
+	// Se calculan los primeros de cada no terminal
+	for noTerminal := range gramatica {
+		calcularPrimerosRec(noTerminal)
+	}
+
+	return primeros
+}
+
+func eliminarDuplicados(s []string) []string {
+	set := make(map[string]bool)
+	var result []string
+	for _, item := range s {
+		if !set[item] {
+			set[item] = true
+			result = append(result, item)
+		}
+	}
+	return result
+}
+
+func esTerminal(simbolo byte) bool {
+	return simbolo >= 'a' && simbolo <= 'z'
+}
+
+func esNoTerminal(simbolo byte) bool {
+	return simbolo >= 'A' && simbolo <= 'Z'
+}
+
+/*
 func esTerminal(s string) bool {
 	return s != "λ" && s == strings.ToLower(s)
 }
@@ -18,186 +105,62 @@ func esNoTerminal(s string) bool {
 	return s != "λ" && s == strings.ToUpper(s)
 }
 
-func contiene(s []string, e string) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
+func main() {
+	/*gramatica1 := map[string][]string{
+		"LE": {"R", "F", "|", "E", "λ"},
+		"E":  {"s", "*", "|", "l", "R", "LE", "s"},
+		"F":  {"4", "|", "6", "R", "|", "t", "E", "λ"},
+		"R":  {"i", "|", "E"},
+	}/
+
+	gramatica2 := map[string][]string{
+		"S": {"a", "B", "C", "d"},
+		"B": {"C", "B", "|", "b"},
+		"C": {"c", "c", "|", "λ"},
 	}
-	return false
-}
 
-func puedeProducirEpsilon(primeros []string) bool {
-	return contiene(primeros, "λ")
-}
-
-func (g *Gramatica) calcularPrimeros() map[string][]string {
 	primeros := make(map[string][]string)
 
-	// Paso 1
-	for noTerminal := range g.producciones {
-		primeros[noTerminal] = []string{}
+	fmt.Println(gramatica2)
+
+	for key, value := range primeros {
+		fmt.Println(key, value)
 	}
 
-	// Paso 2
-	primeros[g.produccionInicial] = append(primeros[g.produccionInicial], "λ")
-
-	// Paso 3
-	for cambio := true; cambio; {
-		cambio = false
-		for noTerminal, producciones := range g.producciones {
-			for _, produccion := range producciones {
-				for _, simbolo := range produccion {
-					// Paso 3.1
-					if esTerminal(simbolo) {
-						if !contiene(primeros[noTerminal], simbolo) {
-							primeros[noTerminal] = append(primeros[noTerminal], simbolo)
-							cambio = true
-						}
-						break
-					}
-					// Paso 3.2
-					if esNoTerminal(simbolo) {
-						for _, primer := range primeros[simbolo] {
-							if primer != "λ" && !contiene(primeros[noTerminal], primer) {
-								primeros[noTerminal] = append(primeros[noTerminal], primer)
-								cambio = true
-							}
-						}
-						if !puedeProducirEpsilon(primeros[simbolo]) {
-							break
-						}
-					}
-					// Paso 3.3
-					if simbolo == "λ" {
-						if !contiene(primeros[noTerminal], "λ") {
-							primeros[noTerminal] = append(primeros[noTerminal], "λ")
-							cambio = true
-						}
-						if !puedeProducirEpsilon(primeros[simbolo]) {
-							break
-						}
-					}
-					// Paso 3.4
-					if !puedeProducirEpsilon(primeros[simbolo]) {
-						break
-					}
-				}
-			}
-		}
-	}
-
-	// Paso 4
-	return primeros
 }
 
-func (g *Gramatica) calcularSiguientes() map[string][]string {
-	siguientes := make(map[string][]string)
-	for noTerminal := range g.producciones {
-		siguientes[noTerminal] = []string{}
-	}
-	siguientes[g.produccionInicial] = []string{"$"}
-
-	for {
-		cambios := false
-		for noTerminal, producciones := range g.producciones {
-			for _, produccion := range producciones {
-				for i, simbolo := range produccion {
-					if esNoTerminal(simbolo) {
-						siguientePosibles := []string{}
-						if i < len(produccion)-1 {
-							siguientePosibles = primeros(produccion[i+1:])
-							if puedeProducirEpsilon(siguientePosibles) {
-								siguientePosibles = append(siguientePosibles, siguientes[noTerminal]...)
-							}
-						} else {
-							siguientePosibles = siguientes[noTerminal]
-						}
-						nuevosSiguientes := diferencia(siguientes[simbolo], siguientePosibles)
-						if len(nuevosSiguientes) > 0 {
-							siguientes[simbolo] = append(siguientes[simbolo], nuevosSiguientes...)
-							cambios = true
-						}
-					}
-				}
-			}
-		}
-		if !cambios {
-			break
-		}
-	}
-	return siguientes
+func esTerminal(simbolo byte) bool {
+	return simbolo >= 'a' && simbolo <= 'z'
 }
 
-func simboloEnMinuscula(simbolo string) string {
-	/* Aquí se puede implementar la lógica para convertir un símbolo a su forma en minúscula,
-	en función de las reglas de la gramática*/
-	return strings.ToLower(simbolo)
+func esNoTerminal(simbolo byte) bool {
+	return simbolo >= 'A' && simbolo <= 'Z'
 }
 
-func diferencia(s1 []string, s2 []string) []string {
-	diferencia := []string{}
-	for _, e1 := range s1 {
-		encontrado := false
-		for _, e2 := range s2 {
-			if e1 == e2 {
-				encontrado = true
+func generaLambda(primeros []string) bool {
+	for _, primer := range primeros {
+		if primer != "λ" {
+			return false
+		}
+	}
+	return true
+}
+
+/*
+func primeros(gramatica map[string][]string, primeros map[string][]string) {
+	for clave, valor := range gramatica {
+
+		for _, val := range valor {
+			// En caso de que sea un terminal lo agregamos al mapa de terminales
+			if esTerminal(val) {
+				primeros[clave] = append(primeros[clave], val)
 				break
 			}
-		}
-		if !encontrado {
-			diferencia = append(diferencia, e1)
-		}
-	}
-	return diferencia
-}
 
-func main() {
-	gramatica := Gramatica{
-		produccionInicial: "LE",
-		producciones: map[string][][]string{
-			"LE": {{"R", "F", "|", "E", "lamda"}},
-			"E":  {{"s", "*", "|", "l", "R", "LE", "s"}},
-			"F":  {{"4", "|", "6", "R", "|", "t", "E", "lamda"}},
-			"R":  {{"i", "|", "E"}},
-		},
-	}
-	primeros := gramatica.calcularPrimeros()
-	for noTerminal, simbolos := range primeros {
-		fmt.Printf("Primeros(%s) = {%s}\n", noTerminal, strings.Join(simbolos, ", "))
-	}
-}
-
-/*package main
-
-import (
-	"fmt"
-	"unicode"
-)
-
-func main() {
-	gramatica := map[string][]string{
-		"LE": {"R", "F", "|", "E", "lambda"},
-		"E":  {"s", "*", "|", "l", "R", "LE", "s"},
-		"F":  {"4", "|", "6", "R", "|", "t", "E", "lambda"},
-		"R":  {"i", "|", "E"},
-	}
-
-	fmt.Println(gramatica)
-
-	for clave, valores := range gramatica {
-
-		primerValor := valores[0]
-
-		if unicode.IsUpper(rune(primerValor[0])) {
-			fmt.Printf("%s: %s es una letra mayúscula\n", clave, primerValor)
-		} else if unicode.IsLower(rune(primerValor[0])) {
-			fmt.Printf("%s: %s es una letra minúscula\n", clave, primerValor)
-		} else {
-			fmt.Printf("%s: %s no es una letra\n", clave, primerValor)
+			if esNoTerminal(val) {
+				primeros()
+			}
 		}
 	}
-
-
 }
 */
