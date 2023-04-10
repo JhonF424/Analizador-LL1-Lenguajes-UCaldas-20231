@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"strings"
+
+	"github.com/JhonF424/LL1/controllers"
+	"github.com/JhonF424/LL1/models"
 )
 
 func main() {
@@ -36,87 +39,38 @@ func main() {
 		"C": {"c", "c", "|", "λ"},
 	}*/
 
-	gramatica := map[string]string{
+	/* gramatica := map[string]string{
 		"S": "aBCd",
 		"B": "CB|b",
 		"C": "cc|λ",
+	} */
+
+	gramatica := []models.Grammar{
+
+		{Symbol: "E", Productions: []string{"T", "EP"}},
+		{Symbol: "EP", Productions: []string{"+", "T", "EP"}},
+		{Symbol: "EP", Productions: []string{"-", "T", "EP"}},
+		{Symbol: "EP", Productions: []string{"lambda"}},
+		{Symbol: "T", Productions: []string{"F", "TP"}},
+		{Symbol: "TP", Productions: []string{"*", "F", "TP"}},
+		{Symbol: "TP", Productions: []string{"/", "F", "TP"}},
+		{Symbol: "TP", Productions: []string{"lambda"}},
+		{Symbol: "F", Productions: []string{"(", "E", ")"}},
+		{Symbol: "F", Productions: []string{"num"}},
+		{Symbol: "F", Productions: []string{"id"}}}
+
+	//p := map[string][]string{}
+	firsts := make(map[string][]string)
+	//probando(gramatica, p, "S")
+	//primeros(gramatica, firsts)
+	firsts = controllers.Primeros(gramatica, firsts)
+
+	fmt.Println("Primeros:")
+	for nt, s := range firsts {
+		fmt.Printf("%s: {%s}\n", nt, strings.Join(s, ", "))
 	}
 
-	p := map[string][]string{}
-	probando(gramatica, p, "S")
-	for k, v := range p {
-		fmt.Println(k, v)
-	}
-
 }
-
-func esTerminal(s string) bool {
-	return s != "λ" && s != "|" && s == strings.ToLower(s)
-}
-func esNoTerminal(s string) bool {
-	return s != "λ" && s == strings.ToUpper(s)
-}
-
-func contiene(slice []string, elemento string) bool {
-	for _, elem := range slice {
-		if elem == elemento {
-			return true
-		}
-	}
-	return false
-}
-
-func probando(gramatica map[string]string, prims map[string][]string, inicio string) {
-	for k, v := range gramatica {
-		if k == inicio {
-			listaProds := strings.Split(v, "|")
-			for _, palabra := range listaProds {
-				for _, letra := range palabra {
-					if esTerminal(string(letra)) {
-						prims[k] = append(prims[k], string(letra))
-						break
-					}
-
-					if esNoTerminal(string(letra)) {
-						probando(gramatica, prims, string(letra))
-					}
-				}
-
-			}
-		}
-	}
-}
-
-/*
-func encontrarPrimeros(gramatica map[string]string, prims map[string][]string, inicio string) {
-	if esNoTerminal(inicio) {
-		// Agregar la clave de inicio a los primeros
-		prims[inicio] = []string{}
-
-		// Empezar desde la clave de inicio
-		encontrarPrimerosRecursivo(gramatica, prims, inicio, inicio)
-	} else {
-		panic("El símbolo de inicio debe ser un no terminal")
-	}
-}
-
-func encontrarPrimerosRecursivo(gramatica map[string]string, prims map[string][]string, simboloActual string, inicio string) {
-	listaProds := strings.Split(gramatica[simboloActual], "|")
-
-	for _, prod := range listaProds {
-		for _, letra := range prod {
-			if esTerminal(string(letra)) {
-				prims[inicio] = append(prims[inicio], string(letra))
-				break
-			}
-
-			if esNoTerminal(string(letra)) {
-				encontrarPrimerosRecursivo(gramatica, prims, string(letra), inicio)
-			}
-		}
-	}
-}
-*/
 
 func resolverRecursionIzquierda(gramatica map[string]string) map[string]string {
 	nuevoNoTerminal := "X"                          // Nuevo símbolo no terminal para representar la recursión izquierda
