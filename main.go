@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/JhonF424/LL1/controllers"
@@ -74,49 +75,101 @@ func main() {
 		fmt.Printf("%s: {%s}\n", nt, strings.Join(s, ", "))
 	}
 
-	solution := Solucion(gramatica, firsts, follows)
-	fmt.Println("\nConjunto solución:")
-	for nt, s := range solution {
-		fmt.Printf("%s: {%s}\n", nt, strings.Join(s, ", "))
+	solution := calculateSolutionSet(gramatica, firsts, follows)
+	for k1, v1 := range solution {
+		fmt.Println(k1)
+		for k2, v2 := range v1 {
+			fmt.Println("   ", k2, ":", v2)
+		}
 	}
 
 }
 
-func Solucion(g []models.Grammar, prims map[string][]string, sigs map[string][]string) map[string][]string {
-	solucion := make(map[string][]string)
-	primeros := prims
+// Función para calcular el conjunto solución
+func calculateSolutionSet(grammar []models.Grammar, firstSets map[string][]string, followSets map[string][]string) map[string]map[string]bool {
+	// Declaración del conjunto solución
+	solutionSet := make(map[string]map[string]bool)
 
-	// Agregamos el símbolo inicial a la solución
-	solucion[g.Symbol] = []string{}
+	// Recorremos todas las producciones
+	for _, prod := range grammar {
+		// Si la producción no está en el conjunto solución
+		if _, ok := solutionSet[prod.Symbol]; !ok {
+			// Lo agregamos al conjunto solución
+			solutionSet[prod.Symbol] = make(map[string]bool)
+		}
 
-	for simbolo, producciones := range g.Productions {
-		for _, produccion := range producciones {
-			for i := 0; i < len(produccion); i++ {
-				if controllers.EsTerminal(produccion[i]) {
-					break
+		// Si la producción es una cadena vacía
+		if len(prod.Productions) == 1 && prod.Productions[0] == "lambda" {
+			// Agregamos lambda al conjunto solución
+			solutionSet[prod.Symbol]["lambda"] = true
+			continue
+		}
+
+		// Recorremos las producciones de la producción
+		for _, prodSymbol := range prod.Productions {
+			// Si el símbolo es un terminal, lo agregamos al conjunto solución
+			if isTerminal(prodSymbol) {
+				solutionSet[prod.Symbol][prodSymbol] = true
+				break
+			}
+
+			// Agregamos el primer conjunto de la producción al conjunto solución
+			for _, first := range firstSets[prodSymbol] {
+				solutionSet[prod.Symbol][first] = true
+			}
+
+			// Si el primer conjunto contiene lambda, agregamos el siguiente conjunto al conjunto solución
+			if controllers.ContieneLambda(firstSets[prodSymbol]) {
+				for _, follow := range followSets[prod.Symbol] {
+					solutionSet[prod.Symbol][follow] = true
 				}
-
-				noTerminal := string(produccion[i])
-				if i == len(produccion)-1 {
-					solucion[noTerminal] = controllers.AnnadirAlConjunto(solucion[noTerminal], solucion[simbolo])
-				} else {
-					siguiente := sigs(produccion[i+1:], primeros)
-					if controllers.Contiene(siguiente, "lambda") {
-						siguiente = controllers.AnnadirAlConjunto(siguiente, solucion[simbolo])
-					}
-					solucion[noTerminal] = controllers.AnnadirAlConjunto(siguiente, solucion[noTerminal])
-					if !controllers.Contiene(primeros[string(produccion[i+1])], "lambda") {
-						break
-					}
-				}
+			} else {
+				break
 			}
 		}
 	}
 
-	return solucion
+	// Devolvemos el conjunto solución
+	return solutionSet
+}
+
+// Función para determinar si un símbolo es un terminal
+func isTerminal(symbol string) bool {
+	// Comprobamos si el símbolo es una letra minúscula o un número
+	return regexp.MustCompile(`^[a-z0-9]$`).MatchString(symbol)
+}
+
+// Función para determinar si un conjunto de símbolos contiene lambda
+func containsLambda(symbols map[string]bool) bool {
+	// Comprobamos si el conjunto contiene lambda
+	_, ok := symbols["lambda"]
+	return ok
 }
 
 /*
+func CalculateSolutionSet(grammar []models.Grammar, firstSets map[string][]string, followSets map[string][]string) map[string][]string {
+	solutionSets := make(map[string][]string)
+
+	// Calcular el conjunto solución para cada producción
+	for _, g := range grammar {
+		solution := make([]string, 0)
+		for _, p := range g.Productions {
+			if controllers.ContieneLambda(firstSets[p]) {
+				// Si la producción puede derivar epsilon, agregar los siguientes del símbolo no terminal
+				follow := followSets[g.Symbol]
+				solution = append(solution, follow...)
+			} else {
+				// Si la producción no puede derivar epsilon, agregar los primeros de la producción
+				solution = append(solution, firstSets[p]...)
+			}
+		}
+		solutionSets[g.Symbol] = solution
+	}
+
+	return solutionSets
+}
+
+
 func resolverRecursionIzquierda(gramatica map[string]string) map[string]string {
 	nuevoNoTerminal := "X"                          // Nuevo símbolo no terminal para representar la recursión izquierda
 	produccionesNuevas := make(map[string][]string) // Mapa para almacenar las nuevas producciones
