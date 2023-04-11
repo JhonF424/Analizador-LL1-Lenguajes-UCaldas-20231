@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/JhonF424/LL1/controllers"
@@ -76,11 +75,13 @@ func main() {
 	}
 
 	solution := calculateSolutionSet(gramatica, firsts, follows)
+	fmt.Println("\nConjunto Solución:")
 	for k1, v1 := range solution {
-		fmt.Println(k1)
-		for k2, v2 := range v1 {
-			fmt.Println("   ", k2, ":", v2)
+		fmt.Print("\n" + k1 + ": {")
+		for k2 := range v1 {
+			fmt.Print(", ", k2)
 		}
+		fmt.Print("}")
 	}
 
 }
@@ -108,7 +109,7 @@ func calculateSolutionSet(grammar []models.Grammar, firstSets map[string][]strin
 		// Recorremos las producciones de la producción
 		for _, prodSymbol := range prod.Productions {
 			// Si el símbolo es un terminal, lo agregamos al conjunto solución
-			if isTerminal(prodSymbol) {
+			if controllers.EsTerminal(prodSymbol) {
 				solutionSet[prod.Symbol][prodSymbol] = true
 				break
 			}
@@ -131,19 +132,6 @@ func calculateSolutionSet(grammar []models.Grammar, firstSets map[string][]strin
 
 	// Devolvemos el conjunto solución
 	return solutionSet
-}
-
-// Función para determinar si un símbolo es un terminal
-func isTerminal(symbol string) bool {
-	// Comprobamos si el símbolo es una letra minúscula o un número
-	return regexp.MustCompile(`^[a-z0-9]$`).MatchString(symbol)
-}
-
-// Función para determinar si un conjunto de símbolos contiene lambda
-func containsLambda(symbols map[string]bool) bool {
-	// Comprobamos si el conjunto contiene lambda
-	_, ok := symbols["lambda"]
-	return ok
 }
 
 /*
