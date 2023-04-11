@@ -10,7 +10,7 @@ import (
 
 func main() {
 
-	/*gramatica := map[string][]string{
+	/*gramatica := []models.Grammar{
 		"E":  {"T", "E'"},
 		"E'": {"+", "T", "E'", "|", "λ"},
 		"T":  {"F", "T'"},
@@ -19,31 +19,25 @@ func main() {
 	}
 	*/
 
-	/*gramatica := map[string][]string{ // Estos funcionan
+	/*gramatica := []models.Grammar{
 		"A": {"B", "C"},
 		"B": {"λ", "|", "m"},
 		"C": {"λ", "|", "s"},
 	}*/
 
-	/*gramatica := map[string][]string{
+	/*gramatica := []models.Grammar{
 		"E":  {"T", "EP"},
-		"EP": {"+", "T", "EP", "|", "λ"},
+		"EP": {"+", "T", "EP", "λ"},
 		"T":  {"F", "TP"},
-		"TP": {"*", "F", "TP", "|", "λ"},
-		"F":  {"(", "E", ")", "|", "ident"},
+		"TP": {"*", "F", "TP", "λ"},
+		"F":  {"(", "E", ")", "ident"},
 	}*/
 
-	/*gramatica := map[string][]string{
+	/*gramatica := []models.Grammar{
 		"S": {"a", "B", "C", "d"},
 		"B": {"C", "B", "b"},
 		"C": {"c", "c", "lambda"},
 	}*/
-
-	/* gramatica := map[string]string{
-		"S": "aBCd",
-		"B": "CB|b",
-		"C": "cc|λ",
-	} */
 
 	gramatica := []models.Grammar{
 
@@ -74,90 +68,19 @@ func main() {
 		fmt.Printf("%s: {%s}\n", nt, strings.Join(s, ", "))
 	}
 
-	solution := calculateSolutionSet(gramatica, firsts, follows)
+	solution := controllers.CalculateSolutionSet(gramatica, firsts, follows)
 	fmt.Println("\nConjunto Solución:")
 	for k1, v1 := range solution {
 		fmt.Print("\n" + k1 + ": {")
 		for k2 := range v1 {
-			fmt.Print(", ", k2)
+			fmt.Print(k2, ",")
 		}
 		fmt.Print("}")
 	}
 
 }
 
-// Función para calcular el conjunto solución
-func calculateSolutionSet(grammar []models.Grammar, firstSets map[string][]string, followSets map[string][]string) map[string]map[string]bool {
-	// Declaración del conjunto solución
-	solutionSet := make(map[string]map[string]bool)
-
-	// Recorremos todas las producciones
-	for _, prod := range grammar {
-		// Si la producción no está en el conjunto solución
-		if _, ok := solutionSet[prod.Symbol]; !ok {
-			// Lo agregamos al conjunto solución
-			solutionSet[prod.Symbol] = make(map[string]bool)
-		}
-
-		// Si la producción es una cadena vacía
-		if len(prod.Productions) == 1 && prod.Productions[0] == "lambda" {
-			// Agregamos lambda al conjunto solución
-			solutionSet[prod.Symbol]["lambda"] = true
-			continue
-		}
-
-		// Recorremos las producciones de la producción
-		for _, prodSymbol := range prod.Productions {
-			// Si el símbolo es un terminal, lo agregamos al conjunto solución
-			if controllers.EsTerminal(prodSymbol) {
-				solutionSet[prod.Symbol][prodSymbol] = true
-				break
-			}
-
-			// Agregamos el primer conjunto de la producción al conjunto solución
-			for _, first := range firstSets[prodSymbol] {
-				solutionSet[prod.Symbol][first] = true
-			}
-
-			// Si el primer conjunto contiene lambda, agregamos el siguiente conjunto al conjunto solución
-			if controllers.ContieneLambda(firstSets[prodSymbol]) {
-				for _, follow := range followSets[prod.Symbol] {
-					solutionSet[prod.Symbol][follow] = true
-				}
-			} else {
-				break
-			}
-		}
-	}
-
-	// Devolvemos el conjunto solución
-	return solutionSet
-}
-
 /*
-func CalculateSolutionSet(grammar []models.Grammar, firstSets map[string][]string, followSets map[string][]string) map[string][]string {
-	solutionSets := make(map[string][]string)
-
-	// Calcular el conjunto solución para cada producción
-	for _, g := range grammar {
-		solution := make([]string, 0)
-		for _, p := range g.Productions {
-			if controllers.ContieneLambda(firstSets[p]) {
-				// Si la producción puede derivar epsilon, agregar los siguientes del símbolo no terminal
-				follow := followSets[g.Symbol]
-				solution = append(solution, follow...)
-			} else {
-				// Si la producción no puede derivar epsilon, agregar los primeros de la producción
-				solution = append(solution, firstSets[p]...)
-			}
-		}
-		solutionSets[g.Symbol] = solution
-	}
-
-	return solutionSets
-}
-
-
 func resolverRecursionIzquierda(gramatica map[string]string) map[string]string {
 	nuevoNoTerminal := "X"                          // Nuevo símbolo no terminal para representar la recursión izquierda
 	produccionesNuevas := make(map[string][]string) // Mapa para almacenar las nuevas producciones
@@ -201,4 +124,5 @@ func resolverRecursionIzquierda(gramatica map[string]string) map[string]string {
 	}
 
 	return gramatica
-}*/
+}
+*/
