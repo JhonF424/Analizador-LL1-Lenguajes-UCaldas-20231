@@ -35,8 +35,8 @@ func main() {
 
 	/*gramatica := map[string][]string{
 		"S": {"a", "B", "C", "d"},
-		"B": {"C", "B", "|", "b"},
-		"C": {"c", "c", "|", "λ"},
+		"B": {"C", "B", "b"},
+		"C": {"c", "c", "lambda"},
 	}*/
 
 	/* gramatica := map[string]string{
@@ -59,10 +59,7 @@ func main() {
 		{Symbol: "F", Productions: []string{"num"}},
 		{Symbol: "F", Productions: []string{"id"}}}
 
-	//p := map[string][]string{}
 	firsts := make(map[string][]string)
-	//probando(gramatica, p, "S")
-	//primeros(gramatica, firsts)
 	firsts = controllers.Primeros(gramatica, firsts)
 
 	fmt.Println("Primeros:")
@@ -70,8 +67,56 @@ func main() {
 		fmt.Printf("%s: {%s}\n", nt, strings.Join(s, ", "))
 	}
 
+	follows := controllers.Siguientes(gramatica, firsts)
+
+	fmt.Println("\nSiguientes:")
+	for nt, s := range follows {
+		fmt.Printf("%s: {%s}\n", nt, strings.Join(s, ", "))
+	}
+
+	solution := Solucion(gramatica, firsts, follows)
+	fmt.Println("\nConjunto solución:")
+	for nt, s := range solution {
+		fmt.Printf("%s: {%s}\n", nt, strings.Join(s, ", "))
+	}
+
 }
 
+func Solucion(g []models.Grammar, prims map[string][]string, sigs map[string][]string) map[string][]string {
+	solucion := make(map[string][]string)
+	primeros := prims
+
+	// Agregamos el símbolo inicial a la solución
+	solucion[g.Symbol] = []string{}
+
+	for simbolo, producciones := range g.Productions {
+		for _, produccion := range producciones {
+			for i := 0; i < len(produccion); i++ {
+				if controllers.EsTerminal(produccion[i]) {
+					break
+				}
+
+				noTerminal := string(produccion[i])
+				if i == len(produccion)-1 {
+					solucion[noTerminal] = controllers.AnnadirAlConjunto(solucion[noTerminal], solucion[simbolo])
+				} else {
+					siguiente := sigs(produccion[i+1:], primeros)
+					if controllers.Contiene(siguiente, "lambda") {
+						siguiente = controllers.AnnadirAlConjunto(siguiente, solucion[simbolo])
+					}
+					solucion[noTerminal] = controllers.AnnadirAlConjunto(siguiente, solucion[noTerminal])
+					if !controllers.Contiene(primeros[string(produccion[i+1])], "lambda") {
+						break
+					}
+				}
+			}
+		}
+	}
+
+	return solucion
+}
+
+/*
 func resolverRecursionIzquierda(gramatica map[string]string) map[string]string {
 	nuevoNoTerminal := "X"                          // Nuevo símbolo no terminal para representar la recursión izquierda
 	produccionesNuevas := make(map[string][]string) // Mapa para almacenar las nuevas producciones
@@ -115,4 +160,4 @@ func resolverRecursionIzquierda(gramatica map[string]string) map[string]string {
 	}
 
 	return gramatica
-}
+}*/
