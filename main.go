@@ -4,12 +4,17 @@ import (
 	"fmt"
 	"strings"
 
+
 	"LL1/controllers"
 	"LL1/models"
+	"LL1/views"
+
+
 )
 
 func main() {
 
+	
 	/*gramatica := []models.Grammar{
 		"E":  {"T", "E'"},
 		"E'": {"+", "T", "E'", "|", "λ"},
@@ -99,7 +104,15 @@ func main() {
 		}
 		fmt.Print("}")
 	}
-}
+
+
+	// ---------- GUI --------------
+
+	views.GUI(firsts, follows, solution)
+
+  
+} //
+
 
 // EliminarRecursionIzquierda elimina la recursión izquierda de una gramática
 func EliminarRecursionIzquierda(grammar []models.Grammar) []models.Grammar {
@@ -163,3 +176,4 @@ func EliminarRecursionIzquierda(grammar []models.Grammar) []models.Grammar {
 
 	return newGrammar
 }
+
