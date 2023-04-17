@@ -1,6 +1,6 @@
 package controllers
 
-import "github.com/JhonF424/LL1/models"
+import "LL1/models"
 
 func CalculateSolutionSet(grammar []models.Grammar, firstSets map[string][]string, followSets map[string][]string) map[string]map[string]bool {
 	// Declaración del conjunto solución

@@ -1,6 +1,6 @@
 package controllers
 
-import "github.com/JhonF424/LL1/models"
+import "LL1/models"
 
 func Siguientes(grammar []models.Grammar, primeros map[string][]string) map[string][]string {
 	siguientes := make(map[string][]string)

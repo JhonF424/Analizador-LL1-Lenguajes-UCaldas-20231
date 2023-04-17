@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"github.com/JhonF424/LL1/models"
+	"LL1/models"
 )
 
 func Primeros(grammar []models.Grammar, firsts map[string][]string) map[string][]string {

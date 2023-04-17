@@ -2,12 +2,10 @@ package main
 
 import (
 	"fmt"
-	"reflect"
-	"strconv"
 	"strings"
 
-	"github.com/JhonF424/LL1/controllers"
-	"github.com/JhonF424/LL1/models"
+	"LL1/controllers"
+	"LL1/models"
 )
 
 func main() {
@@ -37,8 +35,22 @@ func main() {
 
 	/*gramatica := []models.Grammar{
 		{Symbol: "S", Productions: []string{"a", "B", "C", "d"}},
-		{Symbol: "B", Productions: []string{"C", "B", "b"}},
+		{Symbol: "B", Productions: []string{"B", "C", "B", "b"}},
 		{Symbol: "C", Productions: []string{"c", "c", "lambda"}},
+	}*/
+
+	/*gramatica := []models.Grammar{
+	{Symbol: "T", Productions: []string{"P", "m", "R"}},
+	{Symbol: "T", Productions: []string{"P", "m", "D"}},
+	{Symbol: "P", Productions: []string{"a", "m", "b"}},
+	{Symbol: "P", Productions: []string{"a", "m", "d"}},
+	{Symbol: "D", Productions: []string{"d"}},
+	{Symbol: "R", Productions: []string{"r"}}}*/
+
+	/*gramatica := []models.Grammar{
+		{Symbol: "E", Productions: []string{"T", "T", "+", "E"}},
+		{Symbol: "T", Productions: []string{"F", "F", "*", "T"}},
+		{Symbol: "F", Productions: []string{"(", "E", ")", "id"}},
 	}*/
 
 	gramatica := []models.Grammar{
@@ -55,10 +67,18 @@ func main() {
 		{Symbol: "F", Productions: []string{"num"}},
 		{Symbol: "F", Productions: []string{"id"}}}
 
+	//gsr := EliminarRecursionIzquierda(gramatica) 
+
+	// Imprimir gramática factorizada
+	fmt.Println("\nGramática sin recursión izquierda:")
+	for _, g := range gramatica {
+		fmt.Printf("%s -> %s\n", g.Symbol, strings.Join(g.Productions, " | "))
+	}
+
 	firsts := make(map[string][]string)
 	firsts = controllers.Primeros(gramatica, firsts)
 
-	fmt.Println("Primeros:")
+	fmt.Println("\nPrimeros:")
 	for nt, s := range firsts {
 		fmt.Printf("%s: {%s}\n", nt, strings.Join(s, ", "))
 	}
@@ -81,133 +101,65 @@ func main() {
 	}
 }
 
-func Factorizar(grammar []models.Grammar) []models.Grammar {
-	for i := 0; i < len(grammar); i++ {
-		for j := 0; j < len(grammar[i].Productions); j++ {
-			for k := j + 1; k < len(grammar[i].Productions); k++ {
-				if grammar[i].Productions[j][0] == grammar[i].Productions[k][0] {
-					temp := commonPrefix(grammar[i].Productions[j], grammar[i].Productions[k])
-					if temp != "" {
-						nonTerminal := fmt.Sprintf("%s'", temp)
-						grammar = addGrammar(grammar, nonTerminal, []string{temp + string(nonTerminal[1])})
-						grammar[i].Productions[j] = strings.Replace(grammar[i].Productions[j], temp, nonTerminal, 1)
-						grammar[i].Productions[k] = strings.Replace(grammar[i].Productions[k], temp, nonTerminal, 1)
-						grammar = removeGrammar(grammar, models.Grammar{Symbol: grammar[i].Symbol, Productions: []string{}})
-						i = 0
-						break
-					}
-				}
-			}
-		}
-	}
-	return grammar
-}
-
 // EliminarRecursionIzquierda elimina la recursión izquierda de una gramática
 func EliminarRecursionIzquierda(grammar []models.Grammar) []models.Grammar {
-	for i := range grammar {
-		symbol := grammar[i].Symbol
-		productions := grammar[i].Productions
-		newProductions := make([]string, 0)
-		nonTerminals := make([]string, 0)
+	newGrammar := make([]models.Grammar, len(grammar))
 
-		// separar producciones recursivas y no recursivas
-		for _, production := range productions {
-			if strings.HasPrefix(production, symbol) {
-				nonTerminals = append(nonTerminals, production)
-			} else {
-				newProductions = append(newProductions, production)
-			}
-		}
+	// Copiar la gramática original en la nueva gramática
+	for i, rule := range grammar {
+		newGrammar[i] = models.Grammar{Symbol: rule.Symbol, Productions: make([]string, len(rule.Productions))}
+		copy(newGrammar[i].Productions, rule.Productions)
+	}
 
-		if len(nonTerminals) == 0 {
-			continue
-		}
+	// Para cada regla en la gramática
+	for i, rule := range newGrammar {
+		// Para cada símbolo en la producción de la regla
+		for j, symbol := range rule.Productions {
+			// Si hay una recursión izquierda
+			if symbol == rule.Symbol {
+				// Crear un nuevo símbolo para las producciones recursivas
+				newSymbol := symbol + "'"
 
-		// construir nuevos símbolos no terminales
-		newSymbols := make([]string, len(nonTerminals))
-		for j := range nonTerminals {
-			newSymbol := symbol + "'" + strconv.Itoa(j)
-			newSymbols[j] = newSymbol
-		}
+				// Crear una nueva regla para las producciones recursivas
+				newRule := models.Grammar{Symbol: newSymbol, Productions: []string{}}
 
-		// crear nuevas producciones sin recursión
-		for _, production := range newProductions {
-			grammar = addGrammar(grammar, symbol, []string{production})
-		}
+				// Añadir una producción lambda a la nueva regla
+				newRule.Productions = append(newRule.Productions, "lambda")
 
-		// crear nuevas producciones con los nuevos símbolos no terminales
-		for j, nonTerminal := range nonTerminals {
-			productions := strings.Split(nonTerminal[len(symbol):], "|")
-			newProductions := make([]string, len(productions))
-			for k, production := range productions {
-				if strings.HasPrefix(production, symbol) {
-					production = strings.Replace(production, symbol, newSymbols[j], 1)
+				// Para cada producción en la regla original que tenga el símbolo recursivo
+				for _, production := range rule.Productions {
+					if strings.HasPrefix(production, symbol) {
+						// Añadir la producción sin el símbolo recursivo y con el nuevo símbolo
+						newProduction := strings.TrimPrefix(production, symbol)
+						newProduction += newSymbol
+						newRule.Productions = append(newRule.Productions, newProduction)
+					}
 				}
-				newProductions[k] = production + newSymbols[j]
+
+				// Eliminar las producciones recursivas de la regla original
+				newGrammar[i].Productions = append(newGrammar[i].Productions[:j], newGrammar[i].Productions[j+1:]...)
+
+				// Añadir la nueva regla a la gramática
+				newGrammar = append(newGrammar, newRule)
+
+				// Añadir el nuevo símbolo a la regla original y las otras reglas que lo contienen
+				for k := range newGrammar {
+					for l, production := range newGrammar[k].Productions {
+						if strings.Contains(production, symbol) {
+							newProduction := strings.Replace(production, symbol, newSymbol, -1)
+							newGrammar[k].Productions[l] = newProduction
+						}
+					}
+					if newGrammar[k].Symbol == symbol {
+						newGrammar[k].Symbol = newSymbol
+					}
+				}
+
+				// Salir del bucle para evitar procesar producciones adicionales de la regla
+				break
 			}
-			grammar = addGrammar(grammar, newSymbols[j], newProductions)
-		}
-
-		// crear producciones con los nuevos símbolos no terminales para las producciones restantes
-		for _, nonTerminal := range nonTerminals {
-			productions := strings.Split(nonTerminal[len(symbol):], "|")
-			newProductions := make([]string, len(productions))
-			for k, production := range productions {
-				newProductions[k] = production + newSymbols[0]
-			}
-			grammar = addGrammar(grammar, symbol, newProductions)
-		}
-
-		// eliminar producción original
-		grammar = removeGrammar(grammar, symbol, productions)
-	}
-
-	return grammar
-}
-
-// Agrega una producción a la gramática
-func addGrammar(grammar []models.Grammar, symbol string, production []string) []models.Grammar {
-	for i := range grammar {
-		if grammar[i].Symbol == symbol {
-			grammar[i].Productions = append(grammar[i].Productions, production...)
-			return grammar
 		}
 	}
 
-	grammar = append(grammar, models.Grammar{Symbol: symbol, Productions: production})
-	return grammar
-}
-
-// Remueve una producción de la gramática
-func removeGrammar(grammar []models.Grammar, symbol string, production []string) []models.Grammar {
-	for i := range grammar {
-		if grammar[i].Symbol == symbol {
-			grammar[i].Productions = remove(grammar[i].Productions, production)
-			return grammar
-		}
-	}
-
-	return grammar
-}
-
-// Encuentra el prefijo común más largo entre dos strings
-func commonPrefix(s1, s2 string) string {
-	var prefix string
-	for i := 0; i < len(s1) && i < len(s2); i++ {
-		if s1[i] != s2[i] {
-			break
-		}
-		prefix += string(s1[i])
-	}
-	return prefix
-}
-
-func remove(slice []string, s []string) []string {
-	for i, v := range slice {
-		if reflect.DeepEqual(v, s) {
-			return append(slice[:i], slice[i+1:]...)
-		}
-	}
-	return slice
+	return newGrammar
 }
